@@ -1,0 +1,170 @@
+
+<style>*{box-sizing:border-box;margin:0;padding:0;}body{background:#fff;font-family:system-ui,-apple-system,sans-serif;}</style>
+
+<div style="margin-bottom:6px;">
+  <div style="font-size:12px;font-weight:500;padding:5px 16px;background:#e6f1fb;border:1.5px solid #b5d4f4;border-radius:20px;display:inline-block;color:#185fa5;">Onde progressive — f(x − vt)</div>
+  <div id="wrap1" style="width:100%;height:28vh;min-height:140px;position:relative;border-radius:10px;overflow:hidden;margin-top:5px;border:1.5px solid #e8e8e8;">
+    <canvas id="c1" style="display:block;width:100%;height:100%;"></canvas>
+  </div>
+</div>
+
+<div style="margin-bottom:8px;">
+  <div style="font-size:12px;font-weight:500;padding:5px 16px;background:#e1f5ee;border:1.5px solid #9FE1CB;border-radius:20px;display:inline-block;color:#085041;">Onde stationnaire — 2A·sin(kx)·cos(ωt)</div>
+  <div id="wrap2" style="width:100%;height:38vh;min-height:200px;position:relative;border-radius:10px;overflow:hidden;margin-top:5px;border:1.5px solid #e8e8e8;">
+    <canvas id="c2" style="display:block;width:100%;height:100%;"></canvas>
+  </div>
+</div>
+
+<div style="display:flex;gap:8px;flex-wrap:wrap;margin:0 0 8px;align-items:center;">
+  <div style="display:flex;align-items:center;gap:5px;font-size:13px;color:#185fa5;"><div style="width:18px;height:2px;background:#378ADD;"></div>incidente →</div>
+  <div style="display:flex;align-items:center;gap:5px;font-size:13px;color:#D85A30;"><div style="width:18px;height:2px;background:#D85A30;"></div>réfléchie ←</div>
+  <div style="display:flex;align-items:center;gap:5px;font-size:13px;color:#085041;"><div style="width:18px;height:2px;background:#1D9E75;"></div>stationnaire</div>
+  <div style="display:flex;align-items:center;gap:5px;font-size:13px;color:#BA7517;"><div style="width:10px;height:10px;border-radius:50%;background:#BA7517;display:inline-block;"></div>nœud N (immobile)</div>
+  <div style="display:flex;align-items:center;gap:5px;font-size:13px;color:#7F77DD;font-weight:600;">V ventre (max)</div>
+</div>
+
+<div id="infos" style="font-size:13px;padding:10px 16px;border-radius:20px;background:#f5f5f5;border:1.5px solid #d0d0d0;color:#2c2c2a;margin:0 0 10px;font-family:ui-monospace,monospace;">
+  harmonique n=1 &nbsp;|&nbsp; nœuds : 2 &nbsp;|&nbsp; ventres : 1
+</div>
+
+<div style="display:flex;align-items:center;gap:12px;margin:6px 0;">
+  <span style="min-width:110px;font-size:13px;font-weight:500;color:#2c2c2a;background:#f5f5f5;border:1.5px solid #d0d0d0;border-radius:20px;padding:6px 16px;white-space:nowrap;">Harmonique</span>
+  <input type="range" id="sf" min="1" max="5" value="1" step="1" style="flex:1;accent-color:#378ADD;">
+  <span id="sfv" style="min-width:52px;text-align:center;font-size:13px;font-weight:500;color:#2c2c2a;background:#f5f5f5;border:1.5px solid #d0d0d0;border-radius:20px;padding:6px 12px;">1</span>
+</div>
+
+<div style="display:flex;gap:8px;margin:10px 0 4px;">
+  <button id="btn-p" onclick="togglePause()" style="padding:8px 20px;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;border:1.5px solid #185fa5;background:#e6f1fb;color:#185fa5;">Pause</button>
+</div>
+
+<script>
+const c1=document.getElementById('c1');
+const c2=document.getElementById('c2');
+let paused=false, t=0;
+
+document.getElementById('sf').addEventListener('input',()=>{
+  const n=parseInt(document.getElementById('sf').value);
+  document.getElementById('sfv').textContent=n;
+  document.getElementById('infos').innerHTML=
+    `harmonique n=${n} &nbsp;|&nbsp; nœuds : ${n+1} &nbsp;|&nbsp; ventres : ${n}`;
+});
+
+function togglePause(){
+  paused=!paused;
+  const b=document.getElementById('btn-p');
+  if(paused){b.textContent='Reprendre';b.style.cssText='padding:8px 20px;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;border:1.5px solid #f09595;background:#fcebeb;color:#a32d2d;';}
+  else{b.textContent='Pause';b.style.cssText='padding:8px 20px;border-radius:20px;font-size:13px;font-weight:500;cursor:pointer;border:1.5px solid #185fa5;background:#e6f1fb;color:#185fa5;';}
+}
+
+function getSize(canvas){
+  const r=canvas.parentElement.getBoundingClientRect();
+  const W=Math.round(r.width)||700;
+  const H=Math.round(r.height)||140;
+  if(canvas.width!==W||canvas.height!==H){canvas.width=W;canvas.height=H;}
+  return{W,H};
+}
+
+function drawProg(t,n){
+  const{W,H}=getSize(c1);
+  const ctx=c1.getContext('2d');
+  const cy=H/2;
+  const A=Math.floor(H*0.36);
+  const k=n*Math.PI/W;
+  const omega=k*100;
+
+  ctx.fillStyle='#ffffff';ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(0,0,0,0.07)';ctx.lineWidth=0.7;ctx.setLineDash([3,8]);
+  ctx.beginPath();ctx.moveTo(0,cy);ctx.lineTo(W,cy);ctx.stroke();ctx.setLineDash([]);
+
+  // t=0 tiretée
+  ctx.beginPath();ctx.strokeStyle='#378ADD33';ctx.lineWidth=1.5;ctx.setLineDash([5,5]);
+  for(let x=0;x<=W;x++){const y=cy-A*Math.sin(k*x);x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+  ctx.stroke();ctx.setLineDash([]);
+
+  // onde mobile
+  ctx.beginPath();ctx.strokeStyle='#378ADD';ctx.lineWidth=3;
+  for(let x=0;x<=W;x++){const y=cy-A*Math.sin(k*x-omega*t);x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+  ctx.stroke();
+
+  // flèche v
+  ctx.beginPath();ctx.strokeStyle='#378ADD';ctx.lineWidth=1.8;
+  ctx.moveTo(W-110,20);ctx.lineTo(W-30,20);ctx.stroke();
+  ctx.beginPath();ctx.fillStyle='#378ADD';
+  ctx.moveTo(W-20,20);ctx.lineTo(W-32,13);ctx.lineTo(W-32,27);ctx.closePath();ctx.fill();
+  ctx.fillStyle='#378ADD';ctx.font='500 13px system-ui';ctx.textAlign='right';
+  ctx.fillText('v →',W-112,18);
+}
+
+function drawStat(t,n){
+  const{W,H}=getSize(c2);
+  const ctx=c2.getContext('2d');
+  const cy=H/2;
+  const A=Math.floor(H*0.26);
+  const k=n*Math.PI/W;
+  const omega=k*100;
+
+  ctx.fillStyle='#ffffff';ctx.fillRect(0,0,W,H);
+  ctx.strokeStyle='rgba(0,0,0,0.07)';ctx.lineWidth=0.7;ctx.setLineDash([3,8]);
+  ctx.beginPath();ctx.moveTo(0,cy);ctx.lineTo(W,cy);ctx.stroke();ctx.setLineDash([]);
+
+  // enveloppe ±2A
+  ctx.globalAlpha=0.4;ctx.setLineDash([5,5]);ctx.strokeStyle='#7F77DD';ctx.lineWidth=1.5;
+  ctx.beginPath();
+  for(let x=0;x<=W;x++){const y=cy-2*A*Math.abs(Math.sin(k*x));x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+  ctx.stroke();
+  ctx.beginPath();
+  for(let x=0;x<=W;x++){const y=cy+2*A*Math.abs(Math.sin(k*x));x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+  ctx.stroke();
+  ctx.setLineDash([]);ctx.globalAlpha=1;
+
+  // incidente
+  ctx.beginPath();ctx.strokeStyle='#378ADD';ctx.lineWidth=1.8;ctx.globalAlpha=0.45;
+  for(let x=0;x<=W;x++){const y=cy-A*Math.sin(k*x-omega*t);x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+  ctx.stroke();
+
+  // réfléchie
+  ctx.beginPath();ctx.strokeStyle='#D85A30';ctx.lineWidth=1.8;
+  for(let x=0;x<=W;x++){const y=cy-A*Math.sin(k*x+omega*t);x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);}
+  ctx.stroke();
+  ctx.globalAlpha=1;
+
+  // stationnaire
+  ctx.beginPath();ctx.strokeStyle='#1D9E75';ctx.lineWidth=3.5;
+  for(let x=0;x<=W;x++){
+    const s=A*Math.sin(k*x-omega*t)+A*Math.sin(k*x+omega*t);
+    const y=cy-s;x===0?ctx.moveTo(x,y):ctx.lineTo(x,y);
+  }
+  ctx.stroke();
+
+  // noeuds : m=0..n → n+1 noeuds
+  for(let m=0;m<=n;m++){
+    const x=m*W/n;
+    ctx.beginPath();ctx.arc(x,cy,7,0,Math.PI*2);
+    ctx.fillStyle='#BA7517';ctx.fill();
+    if(m>0&&m<n){
+      ctx.fillStyle='#BA7517';ctx.font='500 12px system-ui';ctx.textAlign='center';
+      ctx.fillText('N',x,cy+20);
+    }
+  }
+
+  // ventres : m=0..n-1 → n ventres
+  for(let m=0;m<n;m++){
+    const x=(m+0.5)*W/n;
+    // ligne verticale amplitude
+    ctx.strokeStyle='#7F77DD';ctx.lineWidth=1;ctx.globalAlpha=0.45;
+    ctx.beginPath();ctx.moveTo(x,cy-2*A);ctx.lineTo(x,cy+2*A);ctx.stroke();
+    ctx.globalAlpha=1;
+    ctx.fillStyle='#7F77DD';ctx.font='500 13px system-ui';ctx.textAlign='center';
+    ctx.fillText('V',x,cy-2*A-10);
+  }
+}
+
+function frame(){
+  if(!paused) t+=1/60;
+  const n=parseInt(document.getElementById('sf').value);
+  drawProg(t,n);
+  drawStat(t,n);
+  requestAnimationFrame(frame);
+}
+frame();
+</script>
